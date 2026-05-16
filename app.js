@@ -1,93 +1,148 @@
-// CORRECTION 1: Fixed the missing 'd' in document
-document.addEventListener('DOMContentLoaded', () => {
-  // CORRECTION 2: Set an empty string placeholder so it doesn't break the syntax
-  
-  let ALL_MOVIES = [];
+const moviesGrid = document.getElementById('moviesGrid');
+const heroContent = document.getElementById('heroContent');
+const heroBg = document.getElementById('heroBg');
+const searchInput = document.getElementById('searchInput');
 
-  fetch('movies.json')
-    .then(res => res.json())
-    .then(data => {
-      ALL_MOVIES = data;
-      renderHero(data);
-      renderTrending(data);
-      renderMovies(data);
-      // This works now because it calls the global function below
-      updateWatchCount(); 
-    });
+let currentMovies = [];
 
-  // HERO
-  function renderHero(movies) {
-    const featured = movies.find(m => m.featured) || movies[0];
+// FETCH POPULAR MOVIES
+async function fetchMovies() {
 
-    document.getElementById('heroBg').style.backgroundImage =
-      `url(${featured.backdrop})`;
+  const response = await fetch(
+    `${BASE_URL}/movie/popular?api_key=${API_KEY}`
+  );
 
-    document.getElementById('heroContent').innerHTML = `
-      <h1>${featured.title}</h1>
-      <p>⭐ ${featured.rating} | ${featured.year}</p>
-      <p>${featured.description}</p>
+  const data = await response.json();
 
-      <button onclick="goToMovie(${featured.id})">▶ Watch</button>
-      <button onclick="addToWatchlist(${featured.id})">+ Watch Later</button>
-    `;
+  currentMovies = data.results;
+
+  renderHero(currentMovies[0]);
+
+  renderMovies(currentMovies);
+
+}
+
+fetchMovies();
+
+// HERO
+function renderHero(movie) {
+
+  heroBg.style.backgroundImage =
+    `url(${IMAGE_URL + movie.backdrop_path})`;
+
+  heroContent.innerHTML = `
+
+    <h1>${movie.title}</h1>
+
+    <p>
+      ⭐ ${movie.vote_average.toFixed(1)}
+    </p>
+
+    <p>
+      ${movie.overview}
+    </p>
+
+    <button onclick="goToMovie(${movie.id})">
+      ▶ Watch
+    </button>
+
+    <button onclick="addToWatchlist(${movie.id})">
+      + Watch Later
+    </button>
+  `;
+}
+
+// MOVIES GRID
+function renderMovies(movies) {
+
+  moviesGrid.innerHTML = movies.map(movie => `
+
+    <div class="movie-card">
+
+      <img
+        src="${IMAGE_URL + movie.poster_path}"
+        alt="${movie.title}"
+      />
+
+      <div class="movie-info">
+
+        <h3>${movie.title}</h3>
+
+        <p>⭐ ${movie.vote_average.toFixed(1)}</p>
+
+        <p class="overview">
+          ${movie.overview.slice(0, 100)}...
+        </p>
+
+        <button onclick="goToMovie(${movie.id})">
+          ▶ Watch
+        </button>
+
+        <button onclick="addToWatchlist(${movie.id})">
+          + Watch Later
+        </button>
+
+      </div>
+
+    </div>
+
+  `).join('');
+
+}
+
+// SEARCH
+searchInput.addEventListener('keyup', async (e) => {
+
+  const query = e.target.value;
+
+  if (query.trim() === "") {
+    renderMovies(currentMovies);
+    return;
   }
 
-  // TRENDING
-  function renderTrending(movies) {
-    const trending = movies.filter(m => m.isTrending);
+  const response = await fetch(
+    `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${query}`
+  );
 
-    document.getElementById('trendingRow').innerHTML =
-      trending.map(movie => `
-        <div class="movie-card">
-          <img src="${movie.poster}" />
-          <h4>${movie.title}</h4>
+  const data = await response.json();
 
-          <p class="rating">⭐ ${movie.rating}</p>
+  renderMovies(data.results);
 
-          <button onclick="goToMovie(${movie.id})">▶</button>
-          <button onclick="addToWatchlist(${movie.id})">+</button>
-        </div>
-      `).join('');
-  }
-
-  // MOVIES GRID
-  function renderMovies(movies) {
-    document.getElementById('moviesGrid').innerHTML =
-      movies.map(movie => `
-        <div class="movie-card">
-          <img src="${movie.poster}" />
-          <h4>${movie.title}</h4>
-
-          <p class="rating">⭐ ${movie.rating}</p>
-
-          <button onclick="goToMovie(${movie.id})">▶ Watch</button>
-          <button onclick="addToWatchlist(${movie.id})">+ Watch Later</button>
-        </div>
-      `).join('');
-  }
 });
 
-// NAVIGATION
+// MOVIE PAGE
 function goToMovie(id) {
   window.location.href = `movie.html?id=${id}`;
 }
 
-// WATCHLIST SYSTEM
+// WATCHLIST
 function addToWatchlist(id) {
-  let list = JSON.parse(localStorage.getItem('watchlist')) || [];
 
-  if (!list.includes(id)) {
-    list.push(id);
-    localStorage.setItem('watchlist', JSON.stringify(list));
+  let watchlist =
+    JSON.parse(localStorage.getItem('watchlist')) || [];
+
+  if (!watchlist.includes(id)) {
+
+    watchlist.push(id);
+
+    localStorage.setItem(
+      'watchlist',
+      JSON.stringify(watchlist)
+    );
+
     alert('Added to Watch Later ✅');
   }
 
   updateWatchCount();
 }
 
-// CORRECTION 3: Moved this outside DOMContentLoaded so the buttons can access it globally
 function updateWatchCount() {
-  const list = JSON.parse(localStorage.getItem('watchlist')) || [];
-  const el = document.getElementById('watchCount');
-  if (el) el.textContent = list.length;
+
+  let watchlist =
+    JSON.parse(localStorage.getItem('watchlist')) || [];
+
+  document.getElementById('watchCount').textContent =
+    watchlist.length;
 }
+
+updateWatchCount();

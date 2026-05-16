@@ -1,59 +1,99 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const id = parseInt(params.get('id'));
+const params = new URLSearchParams(window.location.search);
 
-  // Sync the navbar watch count right when the details page opens
-  updateWatchCount();
+const id = params.get('id');
 
-  fetch('movies.json')
-    .then(res => res.json())
-    .then(movies => {
-      const movie = movies.find(m => m.id === id);
-      
-      // CORRECTION/OPTIMIZATION 1: Handle missing movie gracefully instead of failing silently
-      if (!movie) {
-        document.body.innerHTML = `
-          <div style="text-align: center; padding: 50px; color: white; font-family: sans-serif;">
-            <h2>🎬 Movie not found!</h2>
-            <p>The movie you are looking for does not exist or has been removed.</p>
-            <a href="index.html" style="color: #e50914; text-decoration: none; font-weight: bold;">← Go Back Home</a>
-          </div>
-        `;
-        return;
-      }
+// FETCH MOVIE DETAILS
+async function fetchMovieDetails() {
 
-      // Populate elements if the movie exists
-      document.getElementById('detailHero').style.backgroundImage =
-        `url(${movie.backdrop})`;
+  const response = await fetch(
+    `${BASE_URL}/movie/${id}?api_key=${API_KEY}`
+  );
 
-      document.getElementById('detailPoster').src = movie.poster;
-      document.getElementById('detailTitle').textContent = movie.title;
-      document.getElementById('detailRating').textContent = `⭐ ${movie.rating} (${movie.year})`;
-      document.getElementById('detailDescription').textContent = movie.description;
+  const movie = await response.json();
 
-      document.getElementById('addBtn').onclick = () => {
-        addToWatchlist(movie.id);
-      };
-    });
-});
+  document.getElementById('detailHero').style.backgroundImage =
+    `url(${IMAGE_URL + movie.backdrop_path})`;
 
-// WATCHLIST SYSTEM
-function addToWatchlist(id) {
-  let list = JSON.parse(localStorage.getItem('watchlist')) || [];
+  document.getElementById('detailPoster').src =
+    IMAGE_URL + movie.poster_path;
 
-  if (!list.includes(id)) {
-    list.push(id);
-    localStorage.setItem('watchlist', JSON.stringify(list));
-    alert('Added to Watch Later ✅');
-  }
-  
-  // CORRECTION/OPTIMIZATION 2: Update the visual counter after adding an item
-  updateWatchCount();
+  document.getElementById('detailTitle').textContent =
+    movie.title;
+
+  document.getElementById('detailRating').textContent =
+    `⭐ ${movie.vote_average.toFixed(1)} | ${movie.release_date}`;
+
+  document.getElementById('detailDescription').textContent =
+    movie.overview;
+
+  document.getElementById('addBtn').onclick = () => {
+    addToWatchlist(movie.id);
+  };
+
 }
 
-// CORRECTION/OPTIMIZATION 3: Added this helper function to match app.js behavior
-function updateWatchCount() {
-  const list = JSON.parse(localStorage.getItem('watchlist')) || [];
-  const el = document.getElementById('watchCount');
-  if (el) el.textContent = list.length;
+fetchMovieDetails();
+
+// WATCHLIST
+function addToWatchlist(id) {
+
+  let watchlist =
+    JSON.parse(localStorage.getItem('watchlist')) || [];
+
+  if (!watchlist.includes(id)) {
+
+    watchlist.push(id);
+
+    localStorage.setItem(
+      'watchlist',
+      JSON.stringify(watchlist)
+    );
+
+    alert('Added to Watch Later ✅');
+  }
+
+}
+const searchBox = document.getElementById("search");
+const movieContainer = document.getElementById("movies");
+
+const API_KEY = "YOUR_API_KEY";
+
+searchBox.addEventListener("input", () => {
+  searchMovies(searchBox.value);
+});
+
+async function searchMovies(query) {
+  if (query.trim() === "") {
+    movieContainer.innerHTML = "";
+    return;
+  }
+
+  const response = await fetch(
+    `https://www.omdbapi.com/?s=${query}&apikey=${API_KEY}`
+  );
+
+  const data = await response.json();
+
+  displayMovies(data.Search);
+}
+
+function displayMovies(movies) {
+  movieContainer.innerHTML = "";
+
+  if (!movies) {
+    movieContainer.innerHTML = "<h2>No movies found</h2>";
+    return;
+  }
+
+  movies.forEach((movie) => {
+    const movieCard = document.createElement("div");
+
+    movieCard.innerHTML = `
+      <img src="${movie.Poster}" alt="${movie.Title}">
+      <h3>${movie.Title}</h3>
+      <p>${movie.Year}</p>
+    `;
+
+    movieContainer.appendChild(movieCard);
+  });
 }

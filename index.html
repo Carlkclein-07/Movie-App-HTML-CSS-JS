@@ -4,39 +4,48 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MovieFlix</title>
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar" id="navbar">
-  <div class="nav-logo">MovieFlix</div>
+<nav class="navbar">
 
-  <div class="nav-actions">
-    <button id="watchlistBtn">📌 Watch Later (<span id="watchCount">0</span>)</button>
+  <div class="logo">MovieFlix</div>
+
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search movies..." />
   </div>
+
+  <button id="watchlistBtn">
+    📌 Watch Later (<span id="watchCount">0</span>)
+  </button>
+
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div id="heroBg" class="hero-backdrop"></div>
-  <div class="hero-overlay"></div>
-  <div id="heroContent" class="hero-content"></div>
-</section>
 
-<!-- TRENDING -->
-<section class="section">
-  <h2>Trending</h2>
-  <div id="trendingRow" class="trending-row"></div>
+  <div id="heroBg" class="hero-bg"></div>
+
+  <div class="hero-overlay"></div>
+
+  <div class="hero-content" id="heroContent"></div>
+
 </section>
 
 <!-- MOVIES -->
 <section class="movies-section">
-  <h2>Movies</h2>
+
+  <h2>Popular Movies</h2>
+
   <div id="moviesGrid" class="movies-grid"></div>
+
 </section>
 
-<script src="app.js"></script>
 <script src="config.js"></script>
+<script src="app.js"></script>
+
 </body>
 </html>
