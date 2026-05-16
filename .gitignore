@@ -1,0 +1,6 @@
+#Localenv files
+.env
+.env.local
+.env.development
+#Hide the API key config file config.js
+config.js

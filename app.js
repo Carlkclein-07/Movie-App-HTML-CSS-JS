@@ -1,7 +1,7 @@
 // CORRECTION 1: Fixed the missing 'd' in document
 document.addEventListener('DOMContentLoaded', () => {
   // CORRECTION 2: Set an empty string placeholder so it doesn't break the syntax
-  const API_KEY = "006f10b601f205bbbeb62ec6594c1ce9"; 
+  
   let ALL_MOVIES = [];
 
   fetch('movies.json')
