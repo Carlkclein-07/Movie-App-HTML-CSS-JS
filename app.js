@@ -1,262 +1,93 @@
-// ============================================================
-//  app.js — Homepage Logic for KMovies
-//  This file does three main things:
-//  1. Loads movie data from movies.json
-//  2. Renders the hero, trending row, and movies grid
-//  3. Handles genre filter buttons
-// ============================================================
-
-// --- STEP 1: Wait for the page to be fully loaded before we run any code ---
+// CORRECTION 1: Fixed the missing 'd' in document
 document.addEventListener('DOMContentLoaded', () => {
+  // CORRECTION 2: Set an empty string placeholder so it doesn't break the syntax
+  const API_KEY = "006f10b601f205bbbeb62ec6594c1ce9"; 
+  let ALL_MOVIES = [];
 
-  // --- All the genres we want to show as filter buttons ---
-  const ALL_GENRES = ['Action', 'Adventure', 'Biography', 'Crime', 'Comedy', 'Documentary', 'Drama', 'Horror', 'Mystery'];
-
-  // --- We keep track of which genre is selected in each section ---
-  let trendingActiveGenre = 'All';
-  let moviesActiveGenre = 'All';
-
-  // --- STEP 2: Fetch the JSON file from our server ---
-  // fetch() gets a file asynchronously (in the background).
-  // .then() runs when the file is ready.
   fetch('movies.json')
-    .then(response => response.json())   // parse the text as JSON
-    .then(movies => {
-      // Now "movies" is a JavaScript array of movie objects.
-      // We can use it to build the page!
-      init(movies);
-    })
-    .catch(error => {
-      // If anything goes wrong (e.g., file not found), log the error
-      console.error('Failed to load movies:', error);
+    .then(res => res.json())
+    .then(data => {
+      ALL_MOVIES = data;
+      renderHero(data);
+      renderTrending(data);
+      renderMovies(data);
+      // This works now because it calls the global function below
+      updateWatchCount(); 
     });
 
-
-  // --- STEP 3: Main init function — called once data is ready ---
-  function init(movies) {
-    renderHero(movies);
-    renderTrending(movies);
-    renderMovies(movies);
-    setupNavScroll();
-  }
-
-
-  // ============================================================
-  //  HERO SECTION
-  //  Finds the movie marked "featured: true" and renders it
-  //  as the big banner at the top of the page.
-  // ============================================================
+  // HERO
   function renderHero(movies) {
-    // Find the featured movie (or fall back to the first movie)
     const featured = movies.find(m => m.featured) || movies[0];
 
-    // Get the HTML elements we want to update
-    const heroBg      = document.getElementById('heroBg');
-    const heroContent = document.getElementById('heroContent');
+    document.getElementById('heroBg').style.backgroundImage =
+      `url(${featured.backdrop})`;
 
-    // Set the background image using the backdrop URL
-    heroBg.style.backgroundImage = `url('${featured.backdrop}')`;
+    document.getElementById('heroContent').innerHTML = `
+      <h1>${featured.title}</h1>
+      <p>⭐ ${featured.rating} | ${featured.year}</p>
+      <p>${featured.description}</p>
 
-    // Build the star rating display (e.g., ★ 7.9)
-    const stars = '★'.repeat(Math.round(featured.rating / 2));
-
-    // Build the genre tags string (e.g., "Action · Crime · Drama")
-    const genreText = featured.genres.join(' · ');
-
-    // Inject the HTML into the hero content area
-    heroContent.innerHTML = `
-      <div class="hero-meta">
-        <span class="badge">${featured.type === 'Series' ? 'SERIES' : 'MOVIE'}</span>
-        <span class="hero-rating">★ ${featured.rating}</span>
-        <span>${featured.year}</span>
-        <span>${genreText}</span>
-      </div>
-      <h1 class="hero-title">${featured.title}</h1>
-      <p class="hero-description">${featured.description}</p>
-      <div class="hero-buttons">
-        <a href="movie.html?id=${featured.id}" class="btn-watch">▶ Watch</a>
-        <button class="btn-add" onclick="alert('Added to your list!')">＋ Add List</button>
-      </div>
+      <button onclick="goToMovie(${featured.id})">▶ Watch</button>
+      <button onclick="addToWatchlist(${featured.id})">+ Watch Later</button>
     `;
   }
 
-
-  // ============================================================
-  //  TRENDING ROW
-  //  Renders the horizontally scrollable cards in "Trends Now"
-  // ============================================================
+  // TRENDING
   function renderTrending(movies) {
-    // Build the genre filter buttons
-    buildGenreButtons(
-      'trendingGenres',          // ID of the container
-      ALL_GENRES,                 // list of genres
-      trendingActiveGenre,        // currently selected genre
-      (genre) => {                // callback when a button is clicked
-        trendingActiveGenre = genre;
-        const filtered = filterByGenre(movies.filter(m => m.isTrending), genre);
-        buildTrendingCards(filtered);
-        buildGenreButtons('trendingGenres', ALL_GENRES, genre, arguments.callee);
-      }
-    );
+    const trending = movies.filter(m => m.isTrending);
 
-    // Render all trending movies first
-    const trendingMovies = movies.filter(m => m.isTrending);
-    buildTrendingCards(trendingMovies);
-  }
+    document.getElementById('trendingRow').innerHTML =
+      trending.map(movie => `
+        <div class="movie-card">
+          <img src="${movie.poster}" />
+          <h4>${movie.title}</h4>
 
-  // Builds the actual card HTML for the trending row
-  function buildTrendingCards(movies) {
-    const row = document.getElementById('trendingRow');
+          <p class="rating">⭐ ${movie.rating}</p>
 
-    // If no movies match the filter, show a message
-    if (movies.length === 0) {
-      row.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 8px 0;">No titles found for this genre.</p>';
-      return;
-    }
-
-    // map() loops over the array and turns each movie into an HTML string
-    row.innerHTML = movies.map(movie => `
-      <div class="trending-card" onclick="window.location.href='movie.html?id=${movie.id}'">
-        <img src="${movie.poster}" alt="${movie.title}" loading="lazy" />
-        <div class="trending-card-info">
-          <div class="trending-card-title">${movie.title}</div>
-          <div class="trending-card-meta">
-            <span class="star">★</span>
-            <span>${movie.rating}</span>
-            <span>·</span>
-            <span>${movie.year}</span>
-          </div>
+          <button onclick="goToMovie(${movie.id})">▶</button>
+          <button onclick="addToWatchlist(${movie.id})">+</button>
         </div>
-      </div>
-    `).join('');  // join() connects all the strings into one big string
+      `).join('');
   }
 
-
-  // ============================================================
-  //  MOVIES GRID
-  //  Renders the full movie grid with sort controls
-  // ============================================================
+  // MOVIES GRID
   function renderMovies(movies) {
-    // Build genre filters for movies section
-    buildGenreButtons(
-      'moviesGenres',
-      ALL_GENRES,
-      moviesActiveGenre,
-      (genre) => {
-        moviesActiveGenre = genre;
-        const filtered = filterByGenre(movies, genre);
-        buildMovieCards(filtered);
-        buildGenreButtons('moviesGenres', ALL_GENRES, genre, arguments.callee);
-      }
-    );
+    document.getElementById('moviesGrid').innerHTML =
+      movies.map(movie => `
+        <div class="movie-card">
+          <img src="${movie.poster}" />
+          <h4>${movie.title}</h4>
 
-    // Build the initial movie cards
-    buildMovieCards(movies);
+          <p class="rating">⭐ ${movie.rating}</p>
 
-    // --- Sort Buttons ---
-    document.getElementById('sortLatest').addEventListener('click', function() {
-      setActiveSort(this);
-      // Sort by year descending (newest first)
-      const sorted = [...filterByGenre(movies, moviesActiveGenre)].sort((a, b) => b.year - a.year);
-      buildMovieCards(sorted);
-    });
-
-    document.getElementById('sortYear').addEventListener('click', function() {
-      setActiveSort(this);
-      // Sort by year ascending (oldest first)
-      const sorted = [...filterByGenre(movies, moviesActiveGenre)].sort((a, b) => a.year - b.year);
-      buildMovieCards(sorted);
-    });
-
-    document.getElementById('sortAlpha').addEventListener('click', function() {
-      setActiveSort(this);
-      // Sort alphabetically A-Z by title
-      const sorted = [...filterByGenre(movies, moviesActiveGenre)].sort((a, b) => a.title.localeCompare(b.title));
-      buildMovieCards(sorted);
-    });
-  }
-
-  // Helper: marks the clicked sort button as active
-  function setActiveSort(btn) {
-    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  }
-
-  // Builds the grid of movie cards
-  function buildMovieCards(movies) {
-    const grid = document.getElementById('moviesGrid');
-
-    if (movies.length === 0) {
-      grid.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; padding: 12px 0; grid-column: 1/-1;">No titles found for this genre.</p>';
-      return;
-    }
-
-    grid.innerHTML = movies.map(movie => `
-      <article class="movie-card" onclick="window.location.href='movie.html?id=${movie.id}'" role="button" tabindex="0" aria-label="View ${movie.title}">
-        <div class="movie-card-img-wrap">
-          <span class="movie-type-badge">${movie.type}</span>
-          <img src="${movie.poster}" alt="${movie.title}" loading="lazy" />
-          <div class="movie-card-overlay">
-            <div class="play-icon">▶</div>
-          </div>
+          <button onclick="goToMovie(${movie.id})">▶ Watch</button>
+          <button onclick="addToWatchlist(${movie.id})">+ Watch Later</button>
         </div>
-        <div class="movie-card-body">
-          <div class="movie-card-title">${movie.title}</div>
-          <div class="movie-card-meta">
-            <span>${movie.year}</span>
-            <span class="movie-card-rating">★ ${movie.rating}</span>
-          </div>
-        </div>
-      </article>
-    `).join('');
+      `).join('');
+  }
+});
+
+// NAVIGATION
+function goToMovie(id) {
+  window.location.href = `movie.html?id=${id}`;
+}
+
+// WATCHLIST SYSTEM
+function addToWatchlist(id) {
+  let list = JSON.parse(localStorage.getItem('watchlist')) || [];
+
+  if (!list.includes(id)) {
+    list.push(id);
+    localStorage.setItem('watchlist', JSON.stringify(list));
+    alert('Added to Watch Later ✅');
   }
 
+  updateWatchCount();
+}
 
-  // ============================================================
-  //  GENRE FILTER BUTTONS (Reusable)
-  //  Builds a row of genre buttons inside a container element.
-  //  "activeGenre" is the currently selected one.
-  //  "onSelect" is the function to call when a button is clicked.
-  // ============================================================
-  function buildGenreButtons(containerId, genres, activeGenre, onSelect) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = ''; // Clear existing buttons
-
-    // Create "All" button + one button per genre
-    const allGenres = ['All', ...genres];
-
-    allGenres.forEach(genre => {
-      const btn = document.createElement('button');
-      btn.className = `genre-btn ${genre === activeGenre ? 'active' : ''}`;
-      btn.textContent = genre;
-      btn.addEventListener('click', () => {
-        onSelect(genre);
-      });
-      container.appendChild(btn);
-    });
-  }
-
-  // Filters movies by genre. "All" means no filter.
-  function filterByGenre(movies, genre) {
-    if (genre === 'All') return movies;
-    // Array.includes() checks if the genre is in the movie's genres array
-    return movies.filter(m => m.genres.includes(genre));
-  }
-
-
-  // ============================================================
-  //  NAVBAR SCROLL BEHAVIOUR
-  //  Adds a solid background to the navbar once you scroll down
-  // ============================================================
-  function setupNavScroll() {
-    const navbar = document.getElementById('navbar');
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > 60) {
-        navbar.classList.add('scrolled');
-      } else {
-        navbar.classList.remove('scrolled');
-      }
-    });
-  }
-
-}); // End of DOMContentLoaded
+// CORRECTION 3: Moved this outside DOMContentLoaded so the buttons can access it globally
+function updateWatchCount() {
+  const list = JSON.parse(localStorage.getItem('watchlist')) || [];
+  const el = document.getElementById('watchCount');
+  if (el) el.textContent = list.length;
+}

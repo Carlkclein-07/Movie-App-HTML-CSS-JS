@@ -1,102 +1,59 @@
-// ============================================================
-//  movie.js — Movie Detail Page Logic
-//
-//  When the user clicks a movie card, they go to:
-//    movie.html?id=3
-//
-//  This file reads that "?id=3" from the URL,
-//  finds the matching movie in movies.json,
-//  and fills in all the page content.
-// ============================================================
-
 document.addEventListener('DOMContentLoaded', () => {
-
-  // --- STEP 1: Read the movie ID from the URL ---
-  // window.location.search gives us the "?id=3" part of the URL.
-  // URLSearchParams helps us read individual values from it.
   const params = new URLSearchParams(window.location.search);
-  const movieId = parseInt(params.get('id'), 10); // convert "3" (string) to 3 (number)
+  const id = parseInt(params.get('id'));
 
-  // If there's no ID in the URL, redirect home
-  if (!movieId) {
-    window.location.href = 'index.html';
-    return;
-  }
+  // Sync the navbar watch count right when the details page opens
+  updateWatchCount();
 
-  // --- STEP 2: Load the same movies.json file ---
   fetch('movies.json')
-    .then(response => response.json())
+    .then(res => res.json())
     .then(movies => {
-      // Find the one movie whose id matches
-      const movie = movies.find(m => m.id === movieId);
-
-      // If no movie found with that ID, go back home
+      const movie = movies.find(m => m.id === id);
+      
+      // CORRECTION/OPTIMIZATION 1: Handle missing movie gracefully instead of failing silently
       if (!movie) {
-        window.location.href = 'index.html';
+        document.body.innerHTML = `
+          <div style="text-align: center; padding: 50px; color: white; font-family: sans-serif;">
+            <h2>🎬 Movie not found!</h2>
+            <p>The movie you are looking for does not exist or has been removed.</p>
+            <a href="index.html" style="color: #e50914; text-decoration: none; font-weight: bold;">← Go Back Home</a>
+          </div>
+        `;
         return;
       }
 
-      // Show the movie details on the page
-      renderMovieDetail(movie);
-    })
-    .catch(error => {
-      console.error('Could not load movie data:', error);
+      // Populate elements if the movie exists
+      document.getElementById('detailHero').style.backgroundImage =
+        `url(${movie.backdrop})`;
+
+      document.getElementById('detailPoster').src = movie.poster;
+      document.getElementById('detailTitle').textContent = movie.title;
+      document.getElementById('detailRating').textContent = `⭐ ${movie.rating} (${movie.year})`;
+      document.getElementById('detailDescription').textContent = movie.description;
+
+      document.getElementById('addBtn').onclick = () => {
+        addToWatchlist(movie.id);
+      };
     });
+});
 
+// WATCHLIST SYSTEM
+function addToWatchlist(id) {
+  let list = JSON.parse(localStorage.getItem('watchlist')) || [];
 
-  // ============================================================
-  //  RENDER FUNCTION
-  //  Fills all the page elements with the movie's data
-  // ============================================================
-  function renderMovieDetail(movie) {
-
-    // --- Update the browser tab title ---
-    document.title = `${movie.title} (${movie.year}) — KMovies`;
-
-    // --- Backdrop (the blurred background image behind the content) ---
-    const backdrop = document.getElementById('detailBackdrop');
-    backdrop.style.backgroundImage = `url('${movie.backdrop}')`;
-
-    // --- Poster image ---
-    const poster = document.getElementById('detailPoster');
-    poster.src = movie.poster;
-    poster.alt = `${movie.title} Poster`;
-
-    // --- Title ---
-    document.getElementById('detailTitle').textContent = movie.title;
-
-    // --- Year ---
-    document.getElementById('detailYear').textContent = movie.year;
-
-    // --- Rating ---
-    document.getElementById('detailRating').textContent = movie.rating;
-
-    // --- Type (Movie / Series) ---
-    document.getElementById('detailType').textContent = movie.type;
-
-    // --- Description ---
-    document.getElementById('detailDescription').textContent = movie.description;
-
-    // --- Episodes (only shown for Series) ---
-    const episodesEl = document.getElementById('detailEpisodes');
-    if (movie.type === 'Series' && movie.episodes) {
-      episodesEl.innerHTML = `<strong>${movie.episodes} Episodes</strong>`;
-    } else {
-      episodesEl.style.display = 'none';
-    }
-
-    // --- Genre Tags ---
-    // We loop through the genres array and create a <span> for each one
-    const genresEl = document.getElementById('detailGenres');
-    genresEl.innerHTML = movie.genres.map(genre => `
-      <span class="genre-tag">${genre}</span>
-    `).join('');
-
-    // --- Update the meta description for SEO ---
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute('content', `Watch ${movie.title} (${movie.year}) on KMovies. ${movie.description.slice(0, 120)}...`);
-    }
+  if (!list.includes(id)) {
+    list.push(id);
+    localStorage.setItem('watchlist', JSON.stringify(list));
+    alert('Added to Watch Later ✅');
   }
+  
+  // CORRECTION/OPTIMIZATION 2: Update the visual counter after adding an item
+  updateWatchCount();
+}
 
-}); // End of DOMContentLoaded
+// CORRECTION/OPTIMIZATION 3: Added this helper function to match app.js behavior
+function updateWatchCount() {
+  const list = JSON.parse(localStorage.getItem('watchlist')) || [];
+  const el = document.getElementById('watchCount');
+  if (el) el.textContent = list.length;
+}
